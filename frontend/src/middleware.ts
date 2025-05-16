@@ -6,6 +6,9 @@ import Negotiator from 'negotiator'
 const locales = ['en', 'fr', 'es']
 const defaultLocale = 'en'
 
+// List of paths that require authentication
+const protectedPaths = ['/write']
+
 function getLocale(request: NextRequest): string {
   const negotiatorHeaders: Record<string, string> = {}
   request.headers.forEach((value, key) => (negotiatorHeaders[key] = value))
@@ -31,20 +34,37 @@ export function middleware(request: NextRequest) {
     )
   }
 
-  const token = request.cookies.get('token')?.value;
+  // Check if the path is protected
+  const isProtectedPath = protectedPaths.some(path => 
+    pathname.startsWith(path)
+  )
 
-  // Check if trying to access write page without token
-  if (pathname.includes('/write') && !token) {
-    const locale = pathname.split('/')[1] || getLocale(request);
-    return NextResponse.redirect(new URL(`/${locale}/login`, request.url));
+  if (isProtectedPath) {
+    // Check for authentication token in cookies
+    const authToken = request.cookies.get('authToken')
+    
+    if (!authToken) {
+      // Redirect to login page if not authenticated
+      const loginUrl = new URL('/login', request.url)
+      // Add the original URL as a redirect parameter
+      loginUrl.searchParams.set('redirect', pathname)
+      return NextResponse.redirect(loginUrl)
+    }
   }
 
-  return NextResponse.next();
+  return NextResponse.next()
 }
 
 export const config = {
   matcher: [
-    // Skip all internal paths (_next)
-    '/((?!_next|api|favicon.ico).*)',
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public folder
+     */
+    '/((?!api|_next/static|_next/image|favicon.ico|public).*)',
   ],
 } 
