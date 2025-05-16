@@ -30,6 +30,16 @@ export function middleware(request: NextRequest) {
       new URL(`/${locale}${pathname}`, request.url)
     )
   }
+
+  const token = request.cookies.get('token')?.value;
+
+  // Check if trying to access write page without token
+  if (pathname.includes('/write') && !token) {
+    const locale = pathname.split('/')[1] || getLocale(request);
+    return NextResponse.redirect(new URL(`/${locale}/login`, request.url));
+  }
+
+  return NextResponse.next();
 }
 
 export const config = {
