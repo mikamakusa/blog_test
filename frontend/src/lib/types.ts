@@ -1,4 +1,3 @@
-// export Interface for Image Data
 export interface ImageData {
     url: string;
 }
@@ -8,7 +7,7 @@ export interface Author {
     id: number; // Assuming each author has a unique ID
     name: string;
     email: string;
-    avatar: ImageData; // Assuming you have an avatar image
+    avatar: ImageData; // Assuming the author has
 }
 
 // export Interface for Category Data
@@ -17,7 +16,6 @@ export interface Category {
     name: string;
     description: string; // Optional description
 }
-
 
 export interface BlogPost {
     id: number;
