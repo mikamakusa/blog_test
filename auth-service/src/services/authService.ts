@@ -1,152 +1,183 @@
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { User, IUser } from '../models/User';
-import { StrapiService } from './strapiService';
+import { User } from '../models/User';
+import { StrapiService } from './strapi.service';
 
 export class AuthService {
+  private strapiService: StrapiService;
   private readonly jwtSecret: string;
-  private readonly strapiService: StrapiService;
 
   constructor() {
-    this.jwtSecret = process.env.JWT_SECRET || 'your-secret-key';
     this.strapiService = new StrapiService();
+    this.jwtSecret = process.env.JWT_SECRET || 'default_secret';
   }
 
-  async registerUser(email: string, password: string, name: string): Promise<{ user: IUser; token: string }> {
-    console.log('Starting user registration for:', email);
-    
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      throw new Error('User already exists');
-    }
-
-    // Create user in MongoDB
-    const user = new User({ email, password, name });
-    await user.save();
-    console.log('User saved to MongoDB:', user._id);
-
-    // Try to create user in Strapi (non-blocking)
+  async registerUser(email: string, password: string, name: string) {
     try {
-      await this.strapiService.createStrapiUser({
+      // Check if user already exists
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+        throw new Error('User already exists');
+      }
+
+      // Hash password
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Create user in MongoDB
+      const user = await User.create({
         email,
+        password: hashedPassword,
         name,
       });
-      console.log('User created in Strapi');
-    } catch (error) {
-      console.error('Failed to create Strapi user:', error);
-      // Continue with registration even if Strapi sync fails
-    }
 
-    const token = this.generateToken(user);
-    return { user, token };
-  }
+      // Generate JWT token
+      const token = jwt.sign(
+        { userId: user._id },
+        this.jwtSecret as jwt.Secret,
+        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      );
 
-  async loginUser(email: string, password: string): Promise<{ user: IUser; token: string }> {
-    console.log('Attempting login for user:', email);
-    
-    // Include password in the query using select('+password')
-    const user = await User.findOne({ email }).select('+password');
-    console.log('User found:', !!user);
-    
-    if (!user) {
-      console.log('No user found with email:', email);
-      throw new Error('Invalid credentials');
-    }
+      // Sync with Strapi (non-blocking)
+      this.strapiService.syncUser({
+        email,
+        username: email, // Using email as username for simplicity
+        password, // Send original password as Strapi will hash it
+      }).catch(error => {
+        console.error('Strapi sync error during registration:', error);
+      });
 
-    console.log('Checking password...');
-    const isMatch = await user.comparePassword(password);
-    console.log('Password match result:', isMatch);
-    
-    if (!isMatch) {
-      console.log('Password does not match');
-      throw new Error('Invalid credentials');
-    }
-
-    // Try to sync with Strapi (non-blocking)
-    try {
-      const strapiUser = await this.strapiService.findStrapiUser(email);
-      if (!strapiUser) {
-        await this.strapiService.createStrapiUser({
+      return {
+        token,
+        user: {
+          id: user._id,
           email: user.email,
           name: user.name,
-        });
-        console.log('Created missing Strapi user');
-      }
+        },
+      };
     } catch (error) {
-      console.error('Strapi sync error during login:', error);
-      // Continue login process even if Strapi sync fails
+      console.error('Registration error:', error);
+      throw error;
     }
-
-    console.log('Login successful, generating token');
-    const token = this.generateToken(user);
-    
-    // Remove password from user object before returning
-    user.password = undefined;
-    return { user, token };
   }
 
-  async googleLogin(profile: any): Promise<{ user: IUser; token: string }> {
-    const { email, name, sub: googleId } = profile;
-    console.log('Google login attempt for:', email);
-    
-    let user = await User.findOne({ googleId });
-    if (!user) {
-      // Check if user exists with same email
-      user = await User.findOne({ email });
-      if (user) {
-        // Link Google account to existing user
-        user.googleId = googleId;
-        await user.save();
-        console.log('Linked Google account to existing user');
-      } else {
-        // Create new user
+  async loginUser(email: string, password: string) {
+    try {
+      // Find user in MongoDB
+      const user = await User.findOne({ email });
+      if (!user) {
+        throw new Error('Invalid credentials');
+      }
+
+      // Verify password
+      const isValidPassword = await bcrypt.compare(password, user.password);
+      if (!isValidPassword) {
+        throw new Error('Invalid credentials');
+      }
+
+      // Generate JWT token
+      const token = jwt.sign(
+        { userId: user._id },
+        this.jwtSecret as jwt.Secret,
+        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      );
+
+      // Sync with Strapi (non-blocking)
+      this.strapiService.syncUser({
+        email,
+        username: email, // Using email as username for simplicity
+        password, // Send original password as Strapi will hash it
+      }).catch(error => {
+        console.error('Strapi sync error during login:', error);
+      });
+
+      return {
+        token,
+        user: {
+          id: user._id,
+          email: user.email,
+          name: user.name,
+        },
+      };
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
+  }
+
+  async validateToken(token: string) {
+    try {
+      const decoded = jwt.verify(
+        token,
+        this.jwtSecret
+      ) as { userId: string };
+
+      const user = await User.findById(decoded.userId);
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      return {
+        id: user._id,
+        email: user.email,
+        name: user.name,
+      };
+    } catch (error) {
+      console.error('Token validation error:', error);
+      throw error;
+    }
+  }
+
+  async googleLogin(googleUser: any) {
+    try {
+      if (!googleUser?.emails?.[0]?.value) {
+        throw new Error('No email provided from Google');
+      }
+
+      const email = googleUser.emails[0].value;
+      const name = googleUser.displayName || email.split('@')[0];
+
+      // Find or create user
+      let user = await User.findOne({ email });
+      if (!user) {
+        // Create random password for Google users
+        const randomPassword = Math.random().toString(36).slice(-8);
+        const hashedPassword = await bcrypt.hash(randomPassword, 10);
+
         user = await User.create({
           email,
+          password: hashedPassword,
           name,
-          googleId,
+          googleId: googleUser.id,
         });
-        console.log('Created new user with Google account');
-      }
-    }
 
-    // Try to sync with Strapi (non-blocking)
-    try {
-      const strapiUser = await this.strapiService.findStrapiUser(email);
-      if (!strapiUser) {
-        await this.strapiService.createStrapiUser({
+        // Sync with Strapi (non-blocking)
+        this.strapiService.syncUser({
           email,
-          name,
-          provider: 'google',
-          providerId: googleId,
+          username: email,
+          password: randomPassword, // Send random password to Strapi
+        }).catch(error => {
+          console.error('Strapi sync error during Google login:', error);
         });
-        console.log('Created Strapi user for Google login');
-      } else {
-        await this.strapiService.updateStrapiUser(strapiUser.id, {
-          provider: 'google',
-          providerId: googleId,
-        });
-        console.log('Updated Strapi user with Google info');
       }
+
+      // Generate JWT token
+      const token = jwt.sign(
+        { userId: user._id },
+        this.jwtSecret as jwt.Secret,
+        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      );
+
+      return {
+        token,
+        user: {
+          id: user._id,
+          email: user.email,
+          name: user.name,
+        },
+      };
     } catch (error) {
-      console.error('Failed to sync Google user with Strapi:', error);
-      // Continue login process even if Strapi sync fails
+      console.error('Google login error:', error);
+      throw error;
     }
-
-    const token = this.generateToken(user);
-    return { user, token };
-  }
-
-  async validateToken(token: string): Promise<IUser | null> {
-    try {
-      const decoded = jwt.verify(token, this.jwtSecret) as { id: string };
-      return await User.findById(decoded.id);
-    } catch (error) {
-      return null;
-    }
-  }
-
-  private generateToken(user: IUser): string {
-    return jwt.sign({ id: user.id }, this.jwtSecret, {
-      expiresIn: '7d',
-    });
   }
 } 

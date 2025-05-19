@@ -1,12 +1,13 @@
-import mongoose, { Document } from 'mongoose';
-import bcrypt from 'bcryptjs';
+import mongoose from 'mongoose';
 
-export interface IUser extends Document {
+export interface IUser extends mongoose.Document {
   email: string;
-  password?: string;
+  password: string;
   name: string;
   googleId?: string;
-  comparePassword(candidatePassword: string): Promise<boolean>;
+  strapiId?: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const userSchema = new mongoose.Schema({
@@ -14,59 +15,36 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
     unique: true,
+    trim: true,
     lowercase: true,
   },
   password: {
     type: String,
-    required: function(this: IUser) {
-      return !this.googleId; // Password is required only if not using Google auth
-    },
-    select: false, // Don't include password in queries by default
+    required: true,
   },
   name: {
     type: String,
     required: true,
+    trim: true,
   },
   googleId: {
     type: String,
-    unique: true,
-    sparse: true, // Allow null/undefined values
+    sparse: true,
+  },
+  strapiId: {
+    type: Number,
+    sparse: true,
   },
 }, {
   timestamps: true,
 });
 
-// Hash password before saving
-userSchema.pre('save', async function(next) {
-  try {
-    if (!this.isModified('password') || !this.password) {
-      return next();
-    }
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error) {
-    next(error as Error);
-  }
-});
-
-// Method to compare password
-userSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
-  try {
-    if (!this.password) return false;
-    
-    // Log for debugging
-    console.log('Comparing passwords...');
-    console.log('Candidate password length:', candidatePassword.length);
-    console.log('Stored password length:', this.password.length);
-    
-    const isMatch = await bcrypt.compare(candidatePassword, this.password);
-    console.log('Password match result:', isMatch);
-    return isMatch;
-  } catch (error) {
-    console.error('Error comparing passwords:', error);
-    return false;
-  }
+// Remove sensitive information when converting to JSON
+userSchema.methods.toJSON = function() {
+  const obj = this.toObject();
+  delete obj.password;
+  delete obj.__v;
+  return obj;
 };
 
 export const User = mongoose.model<IUser>('User', userSchema); 
