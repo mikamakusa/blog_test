@@ -7,7 +7,11 @@ const locales = ['en', 'fr', 'es']
 const defaultLocale = 'en'
 
 // List of paths that require authentication
-const protectedPaths = ['/write']
+const protectedPaths = [
+  '/write',
+  '/admin',
+  '/api/protected'
+]
 
 function getLocale(request: NextRequest): string {
   const negotiatorHeaders: Record<string, string> = {}

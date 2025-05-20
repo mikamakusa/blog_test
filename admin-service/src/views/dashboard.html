@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="min-h-screen">
+        <!-- Navigation -->
+        <nav class="bg-white shadow-sm">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16">
+                    <div class="flex items-center">
+                        <h1 class="text-xl font-bold text-gray-900">Admin Dashboard</h1>
+                    </div>
+                    <div class="flex items-center">
+                        <button id="logoutBtn" class="text-gray-600 hover:text-gray-900">Logout</button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+            <!-- Stats Overview -->
+            <div class="bg-white shadow rounded-lg p-6 mb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Overview</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h3 class="text-sm font-medium text-gray-500">Total Posts</h3>
+                        <p id="totalPosts" class="mt-1 text-2xl font-semibold text-gray-900">-</p>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h3 class="text-sm font-medium text-gray-500">Total Users</h3>
+                        <p id="totalUsers" class="mt-1 text-2xl font-semibold text-gray-900">-</p>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h3 class="text-sm font-medium text-gray-500">Total Comments</h3>
+                        <p id="totalComments" class="mt-1 text-2xl font-semibold text-gray-900">-</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="bg-white shadow rounded-lg p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+                <div class="space-y-4">
+                    <button onclick="window.location.href='/api/admin/write'" class="w-full flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Write New Article
+                    </button>
+                    <button onclick="window.location.href='/api/admin/manage'" class="w-full flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                        Manage Content
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Get the auth token from URL parameters or localStorage
+        const urlParams = new URLSearchParams(window.location.search);
+        let token = urlParams.get('token') || localStorage.getItem('token');
+        
+        if (!token) {
+            console.error('No token found in URL or localStorage');
+            window.location.href = '/login';
+        } else {
+            // Store token in localStorage if it came from URL
+            if (urlParams.get('token')) {
+                localStorage.setItem('token', token);
+                // Remove token from URL
+                const newUrl = window.location.pathname;
+                window.history.replaceState({}, document.title, newUrl);
+            }
+        }
+
+        console.log('Token available:', token ? 'Yes' : 'No');
+
+        // Configure axios defaults
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        // Add token to all API requests
+        axios.interceptors.request.use(config => {
+            // Add token to query parameters for GET requests
+            if (config.method === 'get') {
+                config.params = { ...config.params, token };
+            }
+            return config;
+        });
+
+        // Fetch stats
+        async function fetchStats() {
+            try {
+                console.log('Fetching stats with token:', token ? 'Present' : 'Not present');
+                const response = await axios.get('/api/admin/stats');
+                document.getElementById('totalPosts').textContent = response.data.totalPosts || 0;
+                document.getElementById('totalUsers').textContent = response.data.totalUsers || 0;
+            } catch (error) {
+                console.error('Error fetching stats:', error);
+                if (error.response) {
+                    console.error('Error response:', error.response.data);
+                }
+            }
+        }
+
+        // Handle logout
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            localStorage.removeItem('token');
+            window.location.href = '/login';
+        });
+
+        // Initial stats fetch
+        fetchStats();
+    </script>
+</body>
+</html> 

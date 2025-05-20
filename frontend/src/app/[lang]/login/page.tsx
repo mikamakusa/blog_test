@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import GoogleLoginButton from '@/components/GoogleLoginButton';
+import { authApi } from '@/lib/authApi';
 
 export default function LoginPage({
   params: { lang },
@@ -15,7 +16,7 @@ export default function LoginPage({
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const { login } = useAuth();
+  const { login: authLogin } = useAuth();
 
   useEffect(() => {
     // Check for auth error from Google OAuth
@@ -33,13 +34,26 @@ export default function LoginPage({
 
     try {
       console.log('Starting login process...');
-      await login(email, password);
-      console.log('Login successful, redirecting to write page...');
+      // Use authApi directly to get the token
+      const { token } = await authApi.login(email, password);
+      console.log('Received token:', token ? 'Token received' : 'No token received');
+      
+      // Store the token in localStorage
+      localStorage.setItem('token', token);
+      console.log('Token stored in localStorage:', localStorage.getItem('token') ? 'Yes' : 'No');
+      
+      // Update auth context
+      await authLogin(email, password);
+      console.log('Auth context updated');
+      
+      // Add the token to the redirect URL
+      const adminUrl = process.env.NEXT_PUBLIC_ADMIN_SERVICE_URL || 'http://localhost:3003/api/admin/dashboard';
+      const redirectUrl = `${adminUrl}?token=${token}`;
+      console.log('Redirecting to:', redirectUrl);
       
       // Add a small delay to ensure the auth state is updated
       setTimeout(() => {
-        router.push(`/${lang}/write`);
-        router.refresh(); // Force a refresh of the page data
+        window.location.href = redirectUrl;
       }, 100);
     } catch (err) {
       console.error('Login error in page:', err);

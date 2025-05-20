@@ -70,12 +70,12 @@ const Navbar = () => {
                     </li>
                     <li
                         className={
-                            pathname === "/write"
+                            pathname === "/Admin"
                                 ? "text-purple-400"
                                 : "text-white hover:text-purple-400"
                         }
                     >
-                        <Link href="/write">
+                        <Link href="/admin">
                             <FaPen className="hover:text-purple-400" />
                         </Link>
                     </li>
