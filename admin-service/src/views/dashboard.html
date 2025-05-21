@@ -6,6 +6,7 @@
     <title>Admin Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
 </head>
 <body class="bg-gray-100">
     <div class="min-h-screen">
@@ -45,7 +46,7 @@
             </div>
 
             <!-- Quick Actions -->
-            <div class="bg-white shadow rounded-lg p-6">
+            <div class="bg-white shadow rounded-lg p-6 mb-6">
                 <h2 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
                 <div class="space-y-4">
                     <button onclick="window.location.href='/api/admin/write'" class="w-full flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
@@ -56,63 +57,281 @@
                     </button>
                 </div>
             </div>
+
+            <!-- Statistics From Matomo -->
+            <div class="bg-white shadow rounded-lg p-6 mb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Statistics (Matomo)</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <div id="widgetIframe"><iframe width="100%" height="350" src="http://localhost:8080/index.php?module=Widgetize&action=iframe&disableLink=1&widget=1&moduleToWidgetize=Live&actionToWidgetize=getSimpleLastVisitCount&idSite=1&period=day&date=today" scrolling="yes" frameborder="0" marginheight="0" marginwidth="0"></iframe></div>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <div id="widgetIframe"><iframe width="100%" height="350" src="http://localhost:8080/index.php?module=Widgetize&action=iframe&containerId=VisitOverviewWithGraph&disableLink=1&widget=1&moduleToWidgetize=CoreHome&actionToWidgetize=renderWidgetContainer&idSite=1&period=day&date=today" scrolling="yes" frameborder="0" marginheight="0" marginwidth="0"></iframe></div>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <div id="widgetIframe"><iframe width="100%" height="350" src="http://localhost:8080/index.php?module=Widgetize&action=iframe&disableLink=1&widget=1&moduleToWidgetize=CoreAdminHome&actionToWidgetize=getTrackingFailures&idSite=1&period=day&date=today" scrolling="yes" frameborder="0" marginheight="0" marginwidth="0"></iframe></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ads module -->
+            <div class="bg-white shadow rounded-lg p-6 mb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb4-4">Ads Manager</h2>
+                <form id="ad-form" class="space-y-4">
+                    <div>
+                        <label class="block mb-2">Title</label>
+                        <input type="text" name="title" class="w-full p-2 border rounded" required>
+                    </div>
+
+                    <div>
+                        <label class="block mb-2">Description</label>
+                        <textarea name="description" class="w-full p-2 border rounded" required></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block mb-2">Image URL</label>
+                        <input type="url" name="image_url" class="w-full p-2 border rounded" required>
+                    </div>
+
+                    <div>
+                        <label class="block mb-2">Target URL</label>
+                        <input type="url" name="target_url" class="w-full p-2 border rounded" required>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block mb-2">Start Date</label>
+                            <input type="date" name="start_date" class="w-full p-2 border rounded" required>
+                        </div>
+
+                        <div>
+                            <label class="block mb-2">End Date</label>
+                            <input type="date" name="end_date" class="w-full p-2 border rounded" required>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block mb-2">Position</label>
+                        <input type="text" name="position" class="w-full p-2 border rounded" required>
+                    </div>
+
+                    <div>
+                        <label class="block mb-2">Priority</label>
+                        <input type="number" name="priority" class="w-full p-2 border rounded" required>
+                    </div>
+
+                    <div class="flex items-center">
+                        <input type="checkbox" name="is_active" class="mr-2" checked>
+                        <label>Active</label>
+                    </div>
+
+                    <div class="flex gap-4">
+                        <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                            Create Ad
+                        </button>
+                        <button type="button" id="cancel-btn" class="hidden border px-4 py-2 rounded hover:bg-gray-100"
+                                onclick="resetForm()">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div id="ads-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            </div>
         </main>
     </div>
 
     <script>
-        // Get the auth token from URL parameters or localStorage
+        // Get the token from URL parameters or localStorage
         const urlParams = new URLSearchParams(window.location.search);
-        let token = urlParams.get('token') || localStorage.getItem('token');
+        let token = urlParams.get('token');
+        
+        // Clear any existing tokens and store the new one if it came from URL
+        if (token) {
+            localStorage.clear(); // Clear all existing tokens
+            localStorage.setItem('auth_token', token);
+            // Remove token from URL
+            const newUrl = window.location.pathname;
+            window.history.replaceState({}, document.title, newUrl);
+        } else {
+            token = localStorage.getItem('auth_token');
+        }
         
         if (!token) {
             console.error('No token found in URL or localStorage');
             window.location.href = '/login';
-        } else {
-            // Store token in localStorage if it came from URL
-            if (urlParams.get('token')) {
-                localStorage.setItem('token', token);
-                // Remove token from URL
-                const newUrl = window.location.pathname;
-                window.history.replaceState({}, document.title, newUrl);
-            }
         }
 
         console.log('Token available:', token ? 'Yes' : 'No');
 
-        // Configure axios defaults
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        // Add token to all API requests
-        axios.interceptors.request.use(config => {
-            // Add token to query parameters for GET requests
-            if (config.method === 'get') {
-                config.params = { ...config.params, token };
-            }
-            return config;
+        // Add token to all HTMX requests
+        document.body.addEventListener('htmx:configRequest', function(evt) {
+            console.log('HTMX request being configured:', evt.detail.path);
+            evt.detail.headers['Authorization'] = `Bearer ${token}`;
+            console.log('Headers after adding token:', evt.detail.headers);
         });
 
-        // Fetch stats
-        async function fetchStats() {
-            try {
-                console.log('Fetching stats with token:', token ? 'Present' : 'Not present');
-                const response = await axios.get('/api/admin/stats');
-                document.getElementById('totalPosts').textContent = response.data.totalPosts || 0;
-                document.getElementById('totalUsers').textContent = response.data.totalUsers || 0;
-            } catch (error) {
-                console.error('Error fetching stats:', error);
-                if (error.response) {
-                    console.error('Error response:', error.response.data);
+        // Add error handling for HTMX requests
+        document.body.addEventListener('htmx:responseError', function(evt) {
+            console.error('HTMX request failed:', {
+                path: evt.detail.path,
+                status: evt.detail.xhr.status,
+                response: evt.detail.xhr.response
+            });
+            if (evt.detail.xhr.status === 401) {
+                window.location.href = '/login';
+            }
+        });
+
+        // Template for ad card
+        const adCardTemplate = (ad) => `
+            <div class="bg-white rounded-lg shadow-md p-4" id="ad-${ad.id}">
+                <img src="${ad.image_url}" alt="${ad.title}" class="w-full h-48 object-cover mb-4 rounded">
+                <h3 class="font-semibold mb-2">${ad.title}</h3>
+                <p class="text-sm text-gray-600 mb-2">${ad.description}</p>
+                <div class="text-sm text-gray-500 mb-4">
+                    <p>Position: ${ad.position}</p>
+                    <p>Priority: ${ad.priority}</p>
+                    <p>Status: ${ad.is_active ? 'Active' : 'Inactive'}</p>
+                </div>
+                <div class="flex gap-2">
+                    <button class="border px-3 py-1 rounded hover:bg-gray-100"
+                            onclick="editAd('${ad.id}')">
+                        Edit
+                    </button>
+                    <button class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                            onclick="deleteAd('${ad.id}')">
+                        Delete
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // Handle form submission
+        document.getElementById('ad-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            console.log('Form submission started');
+            
+            const formData = new FormData(this);
+            const data = {};
+            
+            // Convert FormData to object
+            for (let [key, value] of formData.entries()) {
+                console.log(`Processing field ${key}:`, value);
+                if (key === 'is_active') {
+                    data[key] = formData.get(key) === 'on';
+                } else if (key === 'priority') {
+                    data[key] = parseInt(value, 10);
+                } else {
+                    data[key] = value;
                 }
             }
-        }
-
-        // Handle logout
-        document.getElementById('logoutBtn').addEventListener('click', () => {
-            localStorage.removeItem('token');
-            window.location.href = '/login';
+            
+            console.log('Data to be sent:', data);
+            
+            try {
+                const response = await fetch('/api/admin/ads', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                console.log('Response status:', response.status);
+                const responseData = await response.json();
+                console.log('Response data:', responseData);
+                
+                if (response.ok) {
+                    // Show success message
+                    alert('Ad created successfully!');
+                    // Reset form
+                    this.reset();
+                    // Refresh ads list
+                    fetchAds();
+                } else {
+                    console.error('Form submission failed:', responseData);
+                    alert('Failed to save ad: ' + (responseData.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error submitting form:', error);
+                alert('Failed to save ad');
+            }
         });
 
-        // Initial stats fetch
-        fetchStats();
+        // Function to fetch ads
+        function fetchAds() {
+            fetch('/api/admin/ads', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            .then(response => response.json())
+            .then(ads => {
+                document.getElementById('ads-grid').innerHTML = ads.map(ad => adCardTemplate(ad)).join('');
+            })
+            .catch(error => {
+                console.error('Error fetching ads:', error);
+            });
+        }
+
+        // Initial fetch of ads
+        fetchAds();
+
+        // Edit ad
+        function editAd(id) {
+            fetch(`/api/admin/ads/${id}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+                .then(response => response.json())
+                .then(ad => {
+                    const form = document.getElementById('ad-form');
+                    form.querySelector('[name="title"]').value = ad.title;
+                    form.querySelector('[name="description"]').value = ad.description;
+                    form.querySelector('[name="image_url"]').value = ad.image_url;
+                    form.querySelector('[name="target_url"]').value = ad.target_url;
+                    form.querySelector('[name="start_date"]').value = ad.start_date.split('T')[0];
+                    form.querySelector('[name="end_date"]').value = ad.end_date.split('T')[0];
+                    form.querySelector('[name="position"]').value = ad.position;
+                    form.querySelector('[name="priority"]').value = ad.priority;
+                    form.querySelector('[name="is_active"]').checked = ad.is_active;
+
+                    // Change form to update mode
+                    form.setAttribute('data-edit-id', id);
+                    document.getElementById('cancel-btn').classList.remove('hidden');
+                });
+        }
+
+        // Delete ad
+        function deleteAd(id) {
+            if (!confirm('Are you sure you want to delete this ad?')) return;
+
+            fetch(`/api/admin/ads/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+                .then(response => {
+                    if (response.ok) {
+                        document.getElementById(`ad-${id}`).remove();
+                        alert('Ad deleted successfully!');
+                    } else {
+                        alert('Failed to delete ad');
+                    }
+                });
+        }
+
+        // Reset form
+        function resetForm() {
+            const form = document.getElementById('ad-form');
+            form.reset();
+            form.removeAttribute('data-edit-id');
+            document.getElementById('cancel-btn').classList.add('hidden');
+        }
     </script>
 </body>
 </html> 

@@ -41,6 +41,7 @@ const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const path_1 = __importDefault(require("path"));
 const admin_routes_1 = require("./routes/admin.routes");
+const ads_1 = __importDefault(require("./routes/ads"));
 const error_middleware_1 = require("./middleware/error.middleware");
 const logger_1 = require("./utils/logger");
 const process = __importStar(require("node:process"));
@@ -54,10 +55,12 @@ app.use((0, cors_1.default)({
 app.use(express_1.default.json());
 app.use('/api/admin/static', express_1.default.static(path_1.default.join(__dirname, 'views')));
 app.use('/api/admin', admin_routes_1.adminRouter);
+app.use('/api/admin/ads', ads_1.default);
 app.use(error_middleware_1.errorHandler);
 app.listen(port, () => {
     logger_1.logger.info(`Admin service listening on port ${port}`);
     logger_1.logger.info(`Views directory: ${path_1.default.join(__dirname, 'views')}`);
     logger_1.logger.info(`Current directory: ${__dirname}`);
+    logger_1.logger.info('Strapi token available:', process.env.NEXT_PUBLIC_STRAPI_API_TOKEN ? 'Yes' : 'No');
 });
 //# sourceMappingURL=index.js.map

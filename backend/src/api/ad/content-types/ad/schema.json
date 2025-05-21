@@ -1,0 +1,47 @@
+{
+  "kind": "collectionType",
+  "collectionName": "ads",
+  "info": {
+    "singularName": "ad",
+    "pluralName": "ads",
+    "displayName": "ad",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {
+    "i18n": {
+      "localized": true
+    }
+  },
+  "attributes": {
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "text"
+    },
+    "image_url": {
+      "type": "string"
+    },
+    "target_url": {
+      "type": "string"
+    },
+    "start_date": {
+      "type": "date"
+    },
+    "end_date": {
+      "type": "date"
+    },
+    "position": {
+      "type": "string"
+    },
+    "is_active": {
+      "type": "boolean"
+    },
+    "priority": {
+      "type": "integer"
+    }
+  }
+}

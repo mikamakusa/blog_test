@@ -373,6 +373,44 @@ export interface AdminUser extends Struct.CollectionTypeSchema {
   };
 }
 
+export interface ApiAdAd extends Struct.CollectionTypeSchema {
+  collectionName: 'ads';
+  info: {
+    description: '';
+    displayName: 'ad';
+    pluralName: 'ads';
+    singularName: 'ad';
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  pluginOptions: {
+    i18n: {
+      localized: true;
+    };
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    description: Schema.Attribute.Text;
+    end_date: Schema.Attribute.Date;
+    image_url: Schema.Attribute.String;
+    is_active: Schema.Attribute.Boolean;
+    locale: Schema.Attribute.String;
+    localizations: Schema.Attribute.Relation<'oneToMany', 'api::ad.ad'>;
+    position: Schema.Attribute.String;
+    priority: Schema.Attribute.Integer;
+    publishedAt: Schema.Attribute.DateTime;
+    start_date: Schema.Attribute.Date;
+    target_url: Schema.Attribute.String;
+    title: Schema.Attribute.String;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
 export interface ApiAuthorAuthor extends Struct.CollectionTypeSchema {
   collectionName: 'authors';
   info: {
@@ -1001,6 +1039,7 @@ declare module '@strapi/strapi' {
       'admin::transfer-token': AdminTransferToken;
       'admin::transfer-token-permission': AdminTransferTokenPermission;
       'admin::user': AdminUser;
+      'api::ad.ad': ApiAdAd;
       'api::author.author': ApiAuthorAuthor;
       'api::blog.blog': ApiBlogBlog;
       'api::category.category': ApiCategoryCategory;

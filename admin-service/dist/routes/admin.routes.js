@@ -49,8 +49,13 @@ router.use(auth_middleware_1.authMiddleware);
 router.get("/health", (_req, res) => {
     res.status(200).json({ status: 'ok' });
 });
-router.get("/dashboard", (_req, res) => {
+router.get("/dashboard", (req, res) => {
     try {
+        const token = req.query.token;
+        if (!token) {
+            logger_1.logger.error('No token provided for dashboard access');
+            return res.redirect('/login');
+        }
         const dashboardPath = path_1.default.join(__dirname, '..', 'views', 'dashboard.html');
         logger_1.logger.info('Attempting to serve dashboard from path:', dashboardPath);
         const fs = require('fs');
@@ -69,6 +74,9 @@ router.get("/dashboard", (_req, res) => {
         logger_1.logger.error('Error in dashboard route:', error);
         throw error;
     }
+});
+router.get('/ads', (req, res) => {
+    res.sendFile(path_1.default.join(__dirname, '../views/ads.html'));
 });
 router.get("/stats", async (_req, res) => {
     try {

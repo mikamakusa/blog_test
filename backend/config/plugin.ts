@@ -1,3 +1,5 @@
+import {env} from "@strapi/utils";
+
 export default {
   'users-permissions': {
     config: {
@@ -16,4 +18,9 @@ export default {
       },
     },
   },
+  matomo: {
+    config: {
+      widgetURL: env('MATOMO_WIDGET_URL'),
+    }
+  }
 }; 

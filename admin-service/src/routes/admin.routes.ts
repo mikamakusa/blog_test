@@ -17,8 +17,15 @@ router.get("/health", (_req: Request, res: Response) => {
 });
 
 // Serve the admin dashboard
-router.get("/dashboard", (_req: Request, res: Response) => {
+router.get("/dashboard", (req: Request, res: Response) => {
     try {
+        // Check for token in query parameters
+        const token = req.query.token;
+        if (!token) {
+            logger.error('No token provided for dashboard access');
+            return res.redirect('/login');
+        }
+
         const dashboardPath = path.join(__dirname, '..', 'views', 'dashboard.html');
         logger.info('Attempting to serve dashboard from path:', dashboardPath);
         
@@ -39,6 +46,11 @@ router.get("/dashboard", (_req: Request, res: Response) => {
         logger.error('Error in dashboard route:', error);
         throw error;
     }
+});
+
+// Serve the ads management page
+router.get('/ads', (req, res) => {
+    res.sendFile(path.join(__dirname, '../views/ads.html'));
 });
 
 // API endpoints for admin functionality

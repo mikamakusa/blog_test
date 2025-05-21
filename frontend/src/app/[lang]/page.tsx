@@ -1,6 +1,7 @@
 import { Locale } from '@/i18n/settings'
 import { fetchFromStrapi } from '@/utils/api'
 import { Metadata } from 'next'
+import AdDisplay from '@/components/AdDisplay';
 
 interface PageProps {
   params: { lang: Locale }
@@ -80,6 +81,7 @@ export default async function Home(props: PageProps) {
 
     return (
       <div className="space-y-8">
+          <AdDisplay position="top" />
         <h1 className="text-3xl font-bold">Bienvenue dans mon univers</h1>
         <div className="text-gray-600">Current language: {lang.toUpperCase()}</div>
         

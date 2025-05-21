@@ -14,6 +14,15 @@ const nextConfig = {
     config.resolve.fallback = { fs: false, path: false };
     return config;
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'www.aquitaineonline.com',
+        pathname: '/images/**',
+      },
+    ],
+  },
 };
 
 export default nextConfig;
