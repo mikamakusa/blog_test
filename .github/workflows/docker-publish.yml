@@ -26,3 +26,7 @@ jobs:
         run: | 
           docker build . --file admin-service/Dockerfile --tag mikamakusa/blog-test-admin-service:latest
           docker push mikamakusa/blog-test-admin-service:latest
+      - name: Build the ads Docker image
+        run: |
+          docker build . --file ads-service/Dockerfile --tag mikamakusa/blog-test-ads-service:latest
+          docker push mikamakusa/blog-test-ads-service:latest
