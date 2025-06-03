@@ -34,3 +34,7 @@ jobs:
         run: |
           docker build . --file auth-service/Dockerfile --tag mikamakusa/blog-test-auth-service:latest
           docker push mikamakusa/blog-test-auth-service:latest
+      - name: Build the write Docker image
+        run: |
+          docker build . --file write-service/Dockerfile --tag mikamakusa/blog-test-write-service:latest
+          docker push mikamakusa/blog-test-write-service:latest

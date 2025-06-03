@@ -11,10 +11,10 @@ USER nodejs
 
 WORKDIR /home/nodejs
 
-COPY --chown=nodejs:nodejs auth-service/package*.json ./
+COPY --chown=nodejs:nodejs write-service/package*.json ./
 RUN npm install
-COPY --chown=nodejs:nodejs auth-service/src ./src
-COPY --chown=nodejs:nodejs auth-service/tsconfig.json ./
+COPY --chown=nodejs:nodejs write-service/src ./src
+COPY --chown=nodejs:nodejs write-service/tsconfig.json ./
 
 RUN npm run build
 
@@ -24,6 +24,6 @@ WORKDIR /home/nodejs
 
 COPY --from=builder --chown=nodejs:nodejs /home/nodejs .
 
-EXPOSE 3001
+EXPOSE 3002
 
 CMD ["npm", "start"]
