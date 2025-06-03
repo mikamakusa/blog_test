@@ -30,3 +30,7 @@ jobs:
         run: |
           docker build . --file ads-service/Dockerfile --tag mikamakusa/blog-test-ads-service:latest
           docker push mikamakusa/blog-test-ads-service:latest
+      - name: Build the auth Docker image
+        run: |
+          docker build . --file auth-service/Dockerfile --tag mikamakusa/blog-test-auth-service:latest
+          docker push mikamakusa/blog-test-auth-service:latest

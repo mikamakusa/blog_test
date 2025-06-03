@@ -11,10 +11,10 @@ USER nodejs
 
 WORKDIR /home/nodejs
 
-COPY --chown=nodejs:nodejs ads-service/package*.json ./
+COPY --chown=nodejs:nodejs auth-service/package*.json ./
 RUN npm install
-COPY --chown=nodejs:nodejs ads-service/src ./src
-COPY --chown=nodejs:nodejs ads-service/tsconfig.json ./
+COPY --chown=nodejs:nodejs auth-service/src ./src
+COPY --chown=nodejs:nodejs auth-service/tsconfig.json ./
 
 RUN npm run build
 
