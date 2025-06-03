@@ -24,5 +24,5 @@ jobs:
           node-version: ${{ matrix.node-version }}
       - name: Build the admin Docker image
         run: | 
-          docker build . --file admin-service/Dockerfile --tag blog-test-admin-service:latest
-          docker push blog-test-admin-service:latest
+          docker build . --file admin-service/Dockerfile --tag mikamakusa/blog-test-admin-service:latest
+          docker push mikamakusa/blog-test-admin-service:latest
